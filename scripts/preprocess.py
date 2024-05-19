@@ -76,7 +76,9 @@ def preprocess_text(text:str, ngrams:int):
     tokens = word_tokenize(text)       # Tokenize text
     filtered_tokens = [token for token in tokens if token not in stop_words]    # Filter token by rejecting tokens for stopwords
     filtered_tokens = [WordNetLemmatizer().lemmatize(token) for token in filtered_tokens]     # Lemmatize Tokens: Change to base form
-    if ngrams==2:
+    if ngrams==1:
+        filtered_tokens = filtered_tokens
+    elif ngrams==2:
         filtered_tokens.extend([' '.join(l) for l in nltk.bigrams(filtered_tokens)])  # Efficiently add bigrams
     elif ngrams==3:
         filtered_tokens.extend([' '.join(l) for l in nltk.trigrams(filtered_tokens)])
