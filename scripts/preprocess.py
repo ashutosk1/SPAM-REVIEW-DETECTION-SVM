@@ -3,13 +3,15 @@ import pandas as pd
 import string
 from collections import Counter
 
+import nltk
+from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
 from sklearn.preprocessing import LabelEncoder
 
 
-def LoadPreprocess(review_path:str, features_list:list):
+def LoadPreprocess(review_path:str, features_list:list, ngrams:int):
 
     """
     Loads and preprocesses a review dataset file.
@@ -22,16 +24,17 @@ def LoadPreprocess(review_path:str, features_list:list):
             - "RATING" (Optional)
             - "PRODUCT_CATEGORY" (Optional)
             - "VERIFIED_PURCHASE" (Optional)
+        ngrams (int): Supports unigram, bigram and trigram for tokenization. 
 
     Returns:
-        pandas.DataFrame: A DataFrame containing preprocessed reviews, labels, and feature vectors.
+        pandas.DataFrame: A DataFrame containing feature vectors as additional column.
 
     Steps:
      - Preprocessing steps:
       1. Load data using pandas.
       2. Remove duplicates and adjust label names.
       3. Convert text to lowercase and remove punctuation.
-      4. Lemmatize words and remove stop words.
+      4. Lemmatize words with provided value of ngrams and remove stop words.
       5. Encode labels.
       6. Create feature vectors based on the features_list argument.
 
@@ -46,8 +49,11 @@ def LoadPreprocess(review_path:str, features_list:list):
     review_df.loc[review_df["LABEL"] =="__label2__", "LABEL"] = "real"
 
     # Preprocesses a text string by performing lowercase conversion, punctuation removal, lemmatization, and stop word removal.
-    review_df["REVIEW_TEXT"] = review_df["REVIEW_TEXT"].apply(lambda text:preprocess_text(text))
-    
+    review_df["REVIEW_TEXT"] = review_df["REVIEW_TEXT"].apply(lambda text:preprocess_text(text, ngrams))
+
+    if "REVIEW_TITLE" in features_list:
+            review_df["REVIEW_TITLE"] = review_df["REVIEW_TITLE"].apply(lambda text:preprocess_text(text, ngrams))
+
     # Encode the labels for Classification.
     label_encoder = LabelEncoder()
     review_df["LABEL"] = label_encoder.fit_transform(review_df["LABEL"])
@@ -59,15 +65,24 @@ def LoadPreprocess(review_path:str, features_list:list):
     return review_df
 
 
-def preprocess_text(text:str):
+def preprocess_text(text:str, ngrams:int):
     """ Preprocesses a text string by performing lowercase conversion, punctuation removal, lemmatization, and stop word removal.
     """
     lemmatizer = WordNetLemmatizer()
     stop_words = set(stopwords.words('english'))
     text = text.lower()
     text = text.translate(str.maketrans({key: None for key in string.punctuation}))  
-    text = " ".join([lemmatizer.lemmatize(word) for word in text.split() if word not in stop_words])
-    return text     
+
+    tokens = word_tokenize(text)       # Tokenize text
+    filtered_tokens = [token for token in tokens if token not in stop_words]    # Filter token by rejecting tokens for stopwords
+    filtered_tokens = [WordNetLemmatizer().lemmatize(token) for token in filtered_tokens]     # Lemmatize Tokens: Change to base form
+    if ngrams==2:
+        filtered_tokens.extend([' '.join(l) for l in nltk.bigrams(filtered_tokens)])  # Efficiently add bigrams
+    elif ngrams==3:
+        filtered_tokens.extend([' '.join(l) for l in nltk.trigrams(filtered_tokens)])
+    else:
+        raise ValueError(f"Invalid value of ngram : {ngrams}. Accepted values are (1, 2, 3) only.")
+    return filtered_tokens
 
 
 def create_feature_vector(row, features_list):
@@ -75,10 +90,10 @@ def create_feature_vector(row, features_list):
     """
     feature_vec_list ={}
     if "REVIEW_TEXT" in features_list:
-        feature_vec_list.update(dict(Counter(row["REVIEW_TEXT"].lower().split())))
+        feature_vec_list.update(dict(Counter(row["REVIEW_TEXT"])))
 
     if "REVIEW_TITLE" in features_list:
-        feature_vec_list.update(dict(Counter(row["REVIEW_TITLE"].lower().split())))
+        feature_vec_list.update(dict(Counter(row["REVIEW_TITLE"])))
 
     if "RATING" in features_list:
         feature_vec_list.update({"R" : row["RATING"]})
