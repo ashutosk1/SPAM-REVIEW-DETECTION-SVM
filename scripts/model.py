@@ -124,8 +124,6 @@ def get_cross_validation_acc(feats, labels, config):
         acc = accuracy_score(val_labels, val_preds)
         (p, r, f, _) = precision_recall_fscore_support(y_pred=val_preds, y_true=val_labels, average='macro')
 
-        print(f"\nfold:{i+1}, acc:{acc:.3f}, precision:{p:.3f}, recall:{r:.3f}, f-score:{f:.3f}")
-        cv_scores.append((acc, p, r, f))
 
     cv_scores = np.mean(np.array(cv_scores), axis=0)
     return cv_scores
