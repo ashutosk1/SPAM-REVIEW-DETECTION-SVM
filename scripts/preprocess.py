@@ -82,6 +82,7 @@ def preprocess_text(text:str, config):
     tokens = word_tokenize(text)       # Tokenize text
     filtered_tokens = [token for token in tokens if token not in stop_words]    # Filter token by rejecting tokens for stopwords
     filtered_tokens = [WordNetLemmatizer().lemmatize(token) for token in filtered_tokens]     # Lemmatize Tokens: Change to base form
+    
     if config["MODEL_NAME"]!="LSTM":  
         if config["common"]["ngrams"]==1:
             filtered_tokens = filtered_tokens
@@ -96,7 +97,6 @@ def preprocess_text(text:str, config):
     else:
         if config["common"]["ngrams"]==1:
             filtered_tokens = filtered_tokens
- 
         else:
             print("[WARNING] Ngram >1 Tokenization for LSTM is not implemented yet!")
         return filtered_tokens

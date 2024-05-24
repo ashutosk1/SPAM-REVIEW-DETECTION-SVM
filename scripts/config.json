@@ -1,6 +1,6 @@
 {
     "FOLD": 5,
-    "MODEL_NAME": "LSTM"  ,  
+    "MODEL_NAME": "LR"  , 
     "REVIEW_TEXT_PATH": "/home/ashutosk/DL_SPAM_REVIEW_CLASSIFICATION/amazon_reviews.txt",
     "FEATURES_LIST": ["REVIEW_TEXT", "VERIFIED_PURCHASE"],
     "common": {
@@ -14,5 +14,7 @@
         "lstm_units": 128,
         "epoch"     : 5,
         "batch_size": 64
-    }
+    },
+    "_all_models_list" :"{LSTM, LR, SVM}",
+    "_all_feature_lists" : "{REVIEW_TEXT, VERIFIED_PURCHASE, RATING, REVIEW_TITLE, PRODUCT_CATEGORY}"
 }

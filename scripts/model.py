@@ -47,8 +47,7 @@ def trainer(processed_review_df, config):
       "recall"    : round(cv_scores[2], 3),
       "f-score"   : round(cv_scores[3], 3)
     }
-
-    print(cv_scores_dict)                   
+    return cv_scores_dict                 
 
 
 
@@ -75,8 +74,8 @@ def get_lstm_model(max_words, max_len, embedding_dim, lstm_units):
     # build layers
     model =  Sequential()
     model.add(Embedding(max_words,embedding_dim, input_length=max_len))
-    model.add(SpatialDropout1D(0.2))
-    model.add(LSTM(lstm_units, dropout=0.2, recurrent_dropout=0.2))
+    model.add(SpatialDropout1D(0.5))
+    model.add(LSTM(lstm_units, dropout=0.5, recurrent_dropout=0.2))
     model.add(Dense(1, activation="sigmoid"))
 
     # compile
@@ -110,14 +109,14 @@ def get_cross_validation_acc(feats, labels, config):
 
         if config["MODEL_NAME"] in ["LR", "SVM"]:
             pipeline = get_sklearn_model_pipeline(config)
-            print(f"\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
+            print(f"\n\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
             classifier = SklearnClassifier(pipeline).train(list(zip(train_feats, train_labels)))
             val_preds = classifier.classify_many(val_feats)
         
         if config["MODEL_NAME"] == "LSTM":
             model = get_lstm_model(config["LSTM"]["num_words"], config["LSTM"]["max_length"], config["LSTM"]["embed_dim"], config["LSTM"]["lstm_units"])
-            print(f"\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
-            history = model.fit(train_feats, train_labels, config["LSTM"]["epoch"], batch_size = config["LSTM"]["batch_size"])
+            print(f"\n\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
+            history = model.fit(train_feats, train_labels, epochs = config["LSTM"]["epoch"], batch_size = config["LSTM"]["batch_size"])
             val_preds = model(val_feats).numpy().flatten()
             val_preds = (val_preds >= 0.5).astype(int)
 
@@ -125,7 +124,7 @@ def get_cross_validation_acc(feats, labels, config):
         acc = accuracy_score(val_labels, val_preds)
         (p, r, f, _) = precision_recall_fscore_support(y_pred=val_preds, y_true=val_labels, average='macro')
 
-        print(f"fold:{i+1}, acc:{acc:.3f}, precision:{p:.3f}, recall:{r:.3f}, f-score:{f:.3f}")
+        print(f"\nfold:{i+1}, acc:{acc:.3f}, precision:{p:.3f}, recall:{r:.3f}, f-score:{f:.3f}")
         cv_scores.append((acc, p, r, f))
 
     cv_scores = np.mean(np.array(cv_scores), axis=0)
