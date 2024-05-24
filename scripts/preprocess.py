@@ -79,7 +79,7 @@ def preprocess_text(text:str, ngrams:int):
     if ngrams==1:
         filtered_tokens = filtered_tokens
     elif ngrams==2:
-        filtered_tokens.extend([' '.join(l) for l in nltk.bigrams(filtered_tokens)])  # Efficiently add bigrams
+        filtered_tokens.extend([' '.join(l) for l in nltk.bigrams(filtered_tokens)]) 
     elif ngrams==3:
         filtered_tokens.extend([' '.join(l) for l in nltk.trigrams(filtered_tokens)])
     else:

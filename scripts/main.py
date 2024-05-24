@@ -1,5 +1,5 @@
 from preprocess import LoadPreprocess
-from model import train_model
+from model import trainer
 import constants
 
 if __name__ == "__main__":
@@ -9,8 +9,8 @@ if __name__ == "__main__":
     features_list    = constants.FEATURE_LIST
     model_name       = constants.MODEL_NAME
     max_iter         = constants.MAX_ITER
-    test_size        = constants.TEST_SIZE
     ngrams           = constants.NGRAMS
+    folds            = constants.FOLDS
 
     # Preprocess the Dataset
     processed_review_df = LoadPreprocess(review_text_path, features_list, ngrams)
@@ -20,10 +20,4 @@ if __name__ == "__main__":
     #     print(100*"*")
 
     # Train Model and report accuracy
-    classifier = train_model(processed_review_df, "LogisticRegression", test_size_frac=test_size, max_iter=max_iter)
-
-
-
-    
-
-
+    _ = trainer(processed_review_df, model_name, max_iter, folds)
