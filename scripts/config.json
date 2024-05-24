@@ -1,0 +1,18 @@
+{
+    "FOLD": 5,
+    "MODEL_NAME": "LSTM"  ,  
+    "REVIEW_TEXT_PATH": "/home/ashutosk/DL_SPAM_REVIEW_CLASSIFICATION/amazon_reviews.txt",
+    "FEATURES_LIST": ["REVIEW_TEXT", "VERIFIED_PURCHASE"],
+    "common": {
+        "max_iter": 10000,
+        "ngrams": 1
+    },
+    "LSTM": {
+        "num_words": 10000,
+        "max_length": 100,
+        "embed_dim": 128,
+        "lstm_units": 128,
+        "epoch"     : 5,
+        "batch_size": 64
+    }
+}
