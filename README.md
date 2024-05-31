@@ -90,8 +90,6 @@ python3 main.py --config /path/to/config
 |                                                                        | 2       | 0.812 | 0.801 | 
 |                                                                        | 3       | 0.812 | 0.807 |
 
-NOTE: The optimization and evaluation of LSTM is in progress and the results will be updated soon to this table.
-
 
 ## Dataset
 https://drive.google.com/file/d/1q9ioiENrQvP9Fnu0jzItdcxLQeTzWVUU/view?usp=sharing
