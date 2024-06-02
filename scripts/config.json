@@ -2,18 +2,18 @@
     "FOLD": 5,
     "MODEL_NAME": "LSTM"  , 
     "REVIEW_TEXT_PATH": "/home/ashutosk/DL_SPAM_REVIEW_CLASSIFICATION/amazon_reviews.txt",
-    "FEATURES_LIST": ["REVIEW_TEXT", "VERIFIED_PURCHASE"],
+    "FEATURES_LIST": ["REVIEW_TEXT", "REVIEW_TITLE", "VERIFIED_PURCHASE"],
     "common": {
         "max_iter": 10000,
         "ngrams": 1
     },
     "LSTM": {
         "num_words": 10000,
-        "max_length": 100,
+        "max_length": 200,
         "embed_dim": 128,
         "lstm_units": 128,
         "epoch"     : 5,
-        "batch_size": 64
+        "batch_size": 16
     },
     "_all_models_list" :"{LSTM, LR, SVM}",
     "_all_feature_lists" : "{REVIEW_TEXT, VERIFIED_PURCHASE, RATING, REVIEW_TITLE, PRODUCT_CATEGORY}"

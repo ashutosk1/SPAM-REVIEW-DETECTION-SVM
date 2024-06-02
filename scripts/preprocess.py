@@ -61,13 +61,12 @@ def LoadPreprocess(config):
     review_df["VERIFIED_PURCHASE"] = review_df["VERIFIED_PURCHASE"].apply(lambda val: "yes" if val=="Y" else "no")
     
 
-    for feats in config["FEATURES_LIST"]:
-        review_df[feats] = review_df[feats].astype(str)
-        review_df[feats] = review_df[feats].apply(lambda text:preprocess_text(text, config))   
+    for feat in config["FEATURES_LIST"]:
+        review_df[feat] = review_df[feat].astype(str)
+        review_df[feat] = review_df[feat].apply(lambda text:preprocess_text(text, config))   
 
     if config["MODEL_NAME"] =="LSTM":
         return review_df
-    
     
     else:
     # Generate Feature Vector for different columns in the `feature_list`.

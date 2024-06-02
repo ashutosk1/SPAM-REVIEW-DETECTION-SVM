@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # lstm
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense, SpatialDropout1D
+from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 
@@ -75,8 +75,14 @@ def get_lstm_model(max_words, max_len, embedding_dim, lstm_units):
     # build layers
     model =  Sequential()
     model.add(Embedding(max_words,embedding_dim, input_length=max_len))
-    model.add(SpatialDropout1D(0.5))
     model.add(LSTM(lstm_units, dropout=0.5, recurrent_dropout=0.2))
+    model.add(Dropout(0.4))
+    model.add(Dense(128, activation="relu"))
+    model.add(Dropout(0.3))
+    model.add(Dense(64, activation="relu"))
+    model.add(Dropout(0.2))
+    model.add(Dense(8, activation="relu"))
+    model.add(Dropout(0.1))
     model.add(Dense(1, activation="sigmoid"))
 
     # compile
@@ -119,7 +125,13 @@ def get_cross_validation_acc(feats, labels, config):
         if config["MODEL_NAME"] == "LSTM":
             model = get_lstm_model(config["LSTM"]["num_words"], config["LSTM"]["max_length"], config["LSTM"]["embed_dim"], config["LSTM"]["lstm_units"])
             print(f"\n\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
-            history = model.fit(train_feats, train_labels, epochs = config["LSTM"]["epoch"], batch_size = config["LSTM"]["batch_size"])
+            
+            validation_data = (val_feats, val_labels)
+            early_stopping = EarlyStopping(monitor='val_loss', patience=10,verbose=1)
+            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1)
+            callbacks =[early_stopping, reduce_lr]
+            history = model.fit(train_feats, train_labels, epochs = config["LSTM"]["epoch"], batch_size = config["LSTM"]["batch_size"],
+                                validation_data=validation_data, callbacks=callbacks)
             val_preds = model(val_feats).numpy().flatten()
             val_preds = (val_preds >= 0.5).astype(int)
 
