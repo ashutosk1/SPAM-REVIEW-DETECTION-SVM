@@ -53,21 +53,28 @@ def LoadPreprocess(config):
     review_df.loc[review_df["LABEL"] =="__label1__", "LABEL"] = "fake"
     review_df.loc[review_df["LABEL"] =="__label2__", "LABEL"] = "real"
 
-    # Preprocesses a text string by performing lowercase conversion, punctuation removal, lemmatization, and stop word removal.
-    review_df["REVIEW_TEXT"] = review_df["REVIEW_TEXT"].apply(lambda text:preprocess_text(text, config))
-
-    if "REVIEW_TITLE" in config["FEATURES_LIST"]:
-            review_df["REVIEW_TITLE"] = review_df["REVIEW_TITLE"].apply(lambda text:preprocess_text(text, config))
-
     # Encode the labels for Classification.
     label_encoder = LabelEncoder()
     review_df["LABEL"] = label_encoder.fit_transform(review_df["LABEL"])
 
-    # Generate Feature Vector for different columns in the `feature_list`.
-    review_df["FEATURE_VECTOR"] = review_df.apply(lambda row: [create_feature_vector(row, config["FEATURES_LIST"])], axis=1)
-    review_df["FEATURE_VECTOR"] = review_df['FEATURE_VECTOR'].apply(lambda x : x[0])
+    # `VERIFIED_PURCHASE` mapped to "yes" or "no"
+    review_df["VERIFIED_PURCHASE"] = review_df["VERIFIED_PURCHASE"].apply(lambda val: "yes" if val=="Y" else "no")
+    
 
-    return review_df
+    for feats in config["FEATURES_LIST"]:
+        review_df[feats] = review_df[feats].astype(str)
+        review_df[feats] = review_df[feats].apply(lambda text:preprocess_text(text, config))   
+
+    if config["MODEL_NAME"] =="LSTM":
+        return review_df
+    
+    
+    else:
+    # Generate Feature Vector for different columns in the `feature_list`.
+        review_df["FEATURE_VECTOR"] = review_df.apply(lambda row: [create_feature_vector(row, config["FEATURES_LIST"])], axis=1)
+        review_df["FEATURE_VECTOR"] = review_df['FEATURE_VECTOR'].apply(lambda x : x[0])
+        
+        return review_df
 
 
 
@@ -75,7 +82,7 @@ def preprocess_text(text:str, config):
     """ Preprocesses a text string by performing lowercase conversion, punctuation removal, lemmatization, and stop word removal.
     """
     lemmatizer = WordNetLemmatizer()
-    stop_words = set(stopwords.words('english'))
+    stop_words = set(stopwords.words('english')) -{"no"}
     text = text.lower()
     text = text.translate(str.maketrans({key: None for key in string.punctuation}))  
 
@@ -116,20 +123,45 @@ def create_feature_vector(row, features_list):
         feature_vec_list.update({"R" : row["RATING"]})
 
     if "PRODUCT_CATEGORY" in features_list:
-        feature_vec_list.update(dict(Counter(row["PRODUCT_CATEGORY"].lower().split())))
+        feature_vec_list.update(dict(Counter(row["PRODUCT_CATEGORY"])))
 
     if "VERIFIED_PURCHASE" in features_list:
-        feature_vec_list.update({"VP": 1} if row["VERIFIED_PURCHASE"]=="Y" else {"VP" : 0})
+        feature_vec_list.update({"VP": 1} if row["VERIFIED_PURCHASE"][0].lower()=="yes" else {"VP" : 0})
     return feature_vec_list
 
 
 
-def lstm_preprocess(preprocessed_review_df, num_words, max_length):
+def lstm_preprocess(preprocessed_review_df, num_words, max_length, features_list):
     """
     Preprocessing for the LSTM Input Layer.
     """
+
+    combined_text = preprocessed_review_df["REVIEW_TEXT"].astype(str)
+
+    other_feats = [feat for feat in features_list if feat!="REVIEW_TEXT"]
+    print(f"other_feats:{other_feats}")
+
+    for feats in other_feats:
+        combined_text += " " + preprocessed_review_df[feats].astype(str)
+    
     tokenizer = Tokenizer(num_words = num_words)
-    tokenizer.fit_on_texts(preprocessed_review_df["FEATURE_VECTOR"].apply(lambda row:[key for key in row.keys()]))
-    preprocessed_review_df["FEATURE_VECTOR"] = tokenizer.texts_to_sequences(preprocessed_review_df["FEATURE_VECTOR"].apply(lambda row: [key for key in row.keys()]))
-    preprocessed_review_df["FEATURE_VECTOR"] = pad_sequences(preprocessed_review_df["FEATURE_VECTOR"], maxlen=max_length).tolist()
-    return preprocessed_review_df, tokenizer
+    tokenizer.fit_on_texts(combined_text)
+        
+    sequences = tokenizer.texts_to_sequences(combined_text)
+    padded_sequences = pad_sequences(sequences, maxlen=max_length).tolist()
+    preprocessed_review_df['FEATURE_VECTOR'] = padded_sequences
+
+
+    # Verify
+    """
+    reconstructed_texts = []
+    for sequence in sequences:
+        reconstructed_texts.append(" ".join([tokenizer.index_word.get(token, '') for token in sequence]))
+    
+    for original, reconstructed in zip(combined_text[:10], reconstructed_texts[:10]):
+        print(f"Original: {original}")
+        print(f"Reconstructed: {reconstructed}")
+        print("=" * 50)
+    """
+
+    return preprocessed_review_df

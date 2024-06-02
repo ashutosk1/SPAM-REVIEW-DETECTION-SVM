@@ -8,6 +8,7 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 # lstm
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, LSTM, Dense, SpatialDropout1D
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 
 import pandas as pd
@@ -34,7 +35,7 @@ def trainer(processed_review_df, config):
 
     if config["MODEL_NAME"] =="LSTM":
         # Preprocess for the LSTM Input Layer : Tokenize, `fit.fit_on_texts()`, `texts_to_sequences()`, `pad_sequences`.
-        processed_review_df, _ = lstm_preprocess(processed_review_df, config["LSTM"]["num_words"], config["LSTM"]["max_length"])
+        processed_review_df = lstm_preprocess(processed_review_df, config["LSTM"]["num_words"], config["LSTM"]["max_length"], config["FEATURES_LIST"])
     
     processed_review_df_feats = np.array(processed_review_df["FEATURE_VECTOR"])
     processed_review_df_labels= processed_review_df["LABEL"].to_numpy()
@@ -107,11 +108,13 @@ def get_cross_validation_acc(feats, labels, config):
         train_feats = np.array(feats[:i*fold_size] + feats[(i+1)*fold_size:])
         train_labels = np.array(labels[:i*fold_size] + labels[(i+1)*fold_size:])
 
+
         if config["MODEL_NAME"] in ["LR", "SVM"]:
             pipeline = get_sklearn_model_pipeline(config)
             print(f"\n\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
             classifier = SklearnClassifier(pipeline).train(list(zip(train_feats, train_labels)))
             val_preds = classifier.classify_many(val_feats)
+
         
         if config["MODEL_NAME"] == "LSTM":
             model = get_lstm_model(config["LSTM"]["num_words"], config["LSTM"]["max_length"], config["LSTM"]["embed_dim"], config["LSTM"]["lstm_units"])
@@ -123,7 +126,8 @@ def get_cross_validation_acc(feats, labels, config):
 
         acc = accuracy_score(val_labels, val_preds)
         (p, r, f, _) = precision_recall_fscore_support(y_pred=val_preds, y_true=val_labels, average='macro')
+        print(f"Fold:{i + 1} -> Acc: {acc:.3f}, Precision: {p:.3f}, Recall: {r:.3f}, F-score: {f:.3f}\n")
 
-
+        cv_scores.append((acc, p, r, f))
     cv_scores = np.mean(np.array(cv_scores), axis=0)
     return cv_scores

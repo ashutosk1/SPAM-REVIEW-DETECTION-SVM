@@ -1,6 +1,6 @@
 {
     "FOLD": 5,
-    "MODEL_NAME": "LR"  , 
+    "MODEL_NAME": "LSTM"  , 
     "REVIEW_TEXT_PATH": "/home/ashutosk/DL_SPAM_REVIEW_CLASSIFICATION/amazon_reviews.txt",
     "FEATURES_LIST": ["REVIEW_TEXT", "VERIFIED_PURCHASE"],
     "common": {
