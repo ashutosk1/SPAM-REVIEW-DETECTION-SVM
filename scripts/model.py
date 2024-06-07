@@ -1,14 +1,5 @@
-from sklearn.pipeline import Pipeline
-from nltk.classify import SklearnClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
-
-# lstm
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 
 import pandas as pd
@@ -19,8 +10,10 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # local
-from preprocess import lstm_preprocess
-
+from preprocess import lstm_preprocess, bert_preprocess
+from sklearn_models import SklearnModelPipelineClassifier
+from lstm import LSTMClassifier
+from bert import BERTForClassification
 
 
 def trainer(processed_review_df, config):
@@ -37,9 +30,16 @@ def trainer(processed_review_df, config):
         # Preprocess for the LSTM Input Layer : Tokenize, `fit.fit_on_texts()`, `texts_to_sequences()`, `pad_sequences`.
         processed_review_df = lstm_preprocess(processed_review_df, config["LSTM"]["num_words"], config["LSTM"]["max_length"], config["FEATURES_LIST"])
     
-    processed_review_df_feats = np.array(processed_review_df["FEATURE_VECTOR"])
-    processed_review_df_labels= processed_review_df["LABEL"].to_numpy()
+
+    if config["MODEL_NAME"] == "BERT":
+        # Preprocess for BERT Input Layer : Tokenization 
+        print("IN THE BERT TOKENIZER")
+        processed_review_df = bert_preprocess(processed_review_df, config["BERT"]["seq_length"], config["FEATURES_LIST"])
     
+
+    processed_review_df_feats = np.array(processed_review_df["FEATURE_VECTOR"])
+    processed_review_df_labels= processed_review_df["LABEL"].to_numpy() 
+
     cv_scores = get_cross_validation_acc(processed_review_df_feats, processed_review_df_labels, config)  
 
     cv_scores_dict =    {
@@ -52,44 +52,29 @@ def trainer(processed_review_df, config):
 
 
 
-def get_sklearn_model_pipeline(config):
-    """
-    Constructs and returns a classification model pipeline to br trained with `SklearnClassifier`.
-    """
-    # Define the model based on model_name
-    if config["MODEL_NAME"]== "LR":
-        model = LogisticRegression(max_iter=config["common"]["max_iter"])
-        pipeline =  Pipeline([('clf', model)])
-    elif config["MODEL_NAME"]== "SVM":
-        model = LinearSVC()
-        pipeline =  Pipeline([('svc', model)])
-    else:
-        raise ValueError(f"Invalid model name")
-    return pipeline
+# def get_lstm_model(max_words, max_len, embedding_dim, lstm_units):
+#     """
+#     Builds an LSTM model for text classification.
+#     """   
+#     # build layers
+#     model =  Sequential()
+#     model.add(Embedding(max_words,embedding_dim, input_length=max_len))
+#     model.add(LSTM(lstm_units, dropout=0.5, recurrent_dropout=0.2))
+#     model.add(Dropout(0.4))
+#     model.add(Dense(128, activation="relu"))
+#     model.add(Dropout(0.3))
+#     model.add(Dense(64, activation="relu"))
+#     model.add(Dropout(0.2))
+#     model.add(Dense(8, activation="relu"))
+#     model.add(Dropout(0.1))
+#     model.add(Dense(1, activation="sigmoid"))
+
+#     # compile
+#     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+#     return model
 
 
-def get_lstm_model(max_words, max_len, embedding_dim, lstm_units):
-    """
-    Builds an LSTM model for text classification.
-    """   
-    # build layers
-    model =  Sequential()
-    model.add(Embedding(max_words,embedding_dim, input_length=max_len))
-    model.add(LSTM(lstm_units, dropout=0.5, recurrent_dropout=0.2))
-    model.add(Dropout(0.4))
-    model.add(Dense(128, activation="relu"))
-    model.add(Dropout(0.3))
-    model.add(Dense(64, activation="relu"))
-    model.add(Dropout(0.2))
-    model.add(Dense(8, activation="relu"))
-    model.add(Dropout(0.1))
-    model.add(Dense(1, activation="sigmoid"))
-
-    # compile
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    return model
-
-
+# --------------------------------------------- execute --------------------------------------------------- #
 def get_cross_validation_acc(feats, labels, config):
     """
     Performs k-fold cross-validation and prints performance metrics for each fold.
@@ -106,7 +91,7 @@ def get_cross_validation_acc(feats, labels, config):
     feats, labels = zip(*merged_feats_and_labels)
 
     for i in range(config["FOLD"]):
-        # Validation set
+        #Validation set
         val_feats = np.array(feats[i*fold_size:(i+1)*fold_size])
         val_labels = np.array(labels[i*fold_size:(i+1)*fold_size])
 
@@ -115,26 +100,50 @@ def get_cross_validation_acc(feats, labels, config):
         train_labels = np.array(labels[:i*fold_size] + labels[(i+1)*fold_size:])
 
 
-        if config["MODEL_NAME"] in ["LR", "SVM"]:
-            pipeline = get_sklearn_model_pipeline(config)
-            print(f"\n\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
-            classifier = SklearnClassifier(pipeline).train(list(zip(train_feats, train_labels)))
+        model_name = config["MODEL_NAME"]
+        # ----------------------------- LR & SVM ------------------------------
+        if model_name in ["LR", "SVM"]:
+            pipeline = SklearnModelPipelineClassifier(config["MODEL_NAME"], 
+                                                      config["common"]["max_iter"]
+                                                    )
+            print(f"\n\t*** TRAINING AND CROSS VALIDATION: {model_name} ***\t")
+            classifier= pipeline.train(train_feats, train_labels)
             val_preds = classifier.classify_many(val_feats)
 
-        
-        if config["MODEL_NAME"] == "LSTM":
-            model = get_lstm_model(config["LSTM"]["num_words"], config["LSTM"]["max_length"], config["LSTM"]["embed_dim"], config["LSTM"]["lstm_units"])
-            print(f"\n\t*** TRAINING AND CROSS VALIDATION: {config['MODEL_NAME']} ***\t")
-            
-            validation_data = (val_feats, val_labels)
-            early_stopping = EarlyStopping(monitor='val_loss', patience=10,verbose=1)
-            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5, min_lr=0.00001, verbose=1)
-            callbacks =[early_stopping, reduce_lr]
-            history = model.fit(train_feats, train_labels, epochs = config["LSTM"]["epoch"], batch_size = config["LSTM"]["batch_size"],
-                                validation_data=validation_data, callbacks=callbacks)
-            val_preds = model(val_feats).numpy().flatten()
+        # ---------------------------- LSTM -----------------------------------
+        elif model_name =="LSTM":
+            lstm_classifier = LSTMClassifier(config["LSTM"]["num_words"],
+                                             config["LSTM"]["max_length"],
+                                             config["LSTM"]["embed_dim"],
+                                             config["LSTM"]["lstm_units"]
+                                            )
+            print(f"\n\t*** TRAINING AND CROSS VALIDATION: {model_name} ***\t")
+
+            lstm_model, _ = lstm_classifier.train(train_feats, train_labels, 
+                                                  val_feats, val_labels, 
+                                                  config["LSTM"]["epoch"], 
+                                                  config["LSTM"]["batch_size"]
+                                                )
+            val_preds = lstm_model(val_feats).numpy().flatten()
             val_preds = (val_preds >= 0.5).astype(int)
 
+
+        # ------------------------- BERT -------------------------------
+        elif model_name =="BERT":
+            print("Inside the BERT model builder")
+            bert_classifier=BERTForClassification(config["BERT"]["model_name"], 
+                                                  config["BERT"]["seq_length"]
+                                                )
+            _= bert_classifier.train(train_feats, train_labels, 
+                            val_feats, val_labels, 
+                            config["BERT"]["epoch"],
+                            config["BERT"]["batch_size"]
+                            )
+
+        else:
+            raise ValueError(f"Unsupported Model name: {model_name}")
+        
+        # ---------------------------- k-fold acc (common) ---------------------
 
         acc = accuracy_score(val_labels, val_preds)
         (p, r, f, _) = precision_recall_fscore_support(y_pred=val_preds, y_true=val_labels, average='macro')

@@ -1,4 +1,5 @@
 
+import numpy as np
 import pandas as pd
 import string
 from collections import Counter
@@ -12,7 +13,6 @@ from nltk.stem import WordNetLemmatizer
 # lstm
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -65,15 +65,18 @@ def LoadPreprocess(config):
         review_df[feat] = review_df[feat].astype(str)
         review_df[feat] = review_df[feat].apply(lambda text:preprocess_text(text, config))   
 
-    if config["MODEL_NAME"] =="LSTM":
+    model_name = config["MODEL_NAME"]
+    if model_name in ("LSTM", "BERT"):
         return review_df
     
-    else:
+    elif model_name in ("LR", "SVM"):
     # Generate Feature Vector for different columns in the `feature_list`.
         review_df["FEATURE_VECTOR"] = review_df.apply(lambda row: [create_feature_vector(row, config["FEATURES_LIST"])], axis=1)
         review_df["FEATURE_VECTOR"] = review_df['FEATURE_VECTOR'].apply(lambda x : x[0])
-        
         return review_df
+    
+    else:
+        raise ValueError(f"Unsupported Model name: {model_name}")
 
 
 
@@ -104,7 +107,7 @@ def preprocess_text(text:str, config):
         if config["common"]["ngrams"]==1:
             filtered_tokens = filtered_tokens
         else:
-            print("[WARNING] Ngram >1 Tokenization for LSTM is not implemented yet!")
+            print("[WARNING] Ngram > 1 Tokenization for LSTM is not implemented yet! Please set the ngrams param as 1.")
         return filtered_tokens
 
 
@@ -152,7 +155,6 @@ def lstm_preprocess(preprocessed_review_df, num_words, max_length, features_list
 
 
     # Verify
-    """
     reconstructed_texts = []
     for sequence in sequences:
         reconstructed_texts.append(" ".join([tokenizer.index_word.get(token, '') for token in sequence]))
@@ -161,6 +163,23 @@ def lstm_preprocess(preprocessed_review_df, num_words, max_length, features_list
         print(f"Original: {original}")
         print(f"Reconstructed: {reconstructed}")
         print("=" * 50)
+    
+    return preprocessed_review_df
+
+
+def bert_preprocess(preprocessed_review_df, seq_length, features_list):
     """
+    Steps:
+    1. For every row, join the list of words for all the features in the features_list and make a new column
+        called `FEATURE_VECTOR`.
+    2. Batch the rows for the column `FEATURE_VECTOR`. 
+    3. Get the List of text strings to be tokenized using a pre-trained Tokenizer. 
+    4. Get a list of encoded text with `input_ids` and `attention_masks` as keys.
+    """
+
+    def join_lists_as_text(row, columns):
+        return ' '.join([' '.join(map(str, row[col])) for col in columns])
+    
+    preprocessed_review_df["FEATURE_VECTOR"] = preprocessed_review_df.apply(join_lists_as_text, columns = features_list, axis=1)
 
     return preprocessed_review_df
