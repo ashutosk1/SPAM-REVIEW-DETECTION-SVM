@@ -1,5 +1,5 @@
 
-# Spam Review Classification
+# Spam Review Classification Using Transformers
 
 This project focuses on classifying spam reviews from Amazon Review's dataset using various machine learning models, including Logistic Regression (LR), Support Vector Machine (SVM), and Long Short-Term Memory (LSTM) networks. A unified and config-driven command-line interface (CLI) tool is provided to streamline experimentation on preprocessing by the addition of different features, training, and k-fold cross-validation.
 
