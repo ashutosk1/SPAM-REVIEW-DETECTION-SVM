@@ -11,11 +11,11 @@ def read_json(config_path):
         try:
                 with open(config_path, "r") as f:
                         config = json.load(f)
-                print(f"Loading configuration file from {config_path}...")
+                print(f"[INFO] Loading configuration file from {config_path}.")
                 return config
 
         except FileNotFoundError:
-                print("Error: Configuration file not found at {config_path}")
+                print("[ERROR] Configuration file not found at {config_path}")
                 return None
 
 
