@@ -8,7 +8,7 @@ This project focuses on classifying spam reviews from Amazon Review's dataset us
 ## Features
 
 - Preprocessing of text data - Feature generation with tokenization, nltk-based text-cleaning, n-gram tokenization, Word2Vec tokenization.
-- Implementation of LR, SVM, and LSTM models.
+- Implementation of LR, SVM, LSTM and BERT models.
 - Model evaluation and comparison using cross-validation. 
 - Unified and config-driven CLI tool for seamless experimentation.
 
@@ -69,17 +69,20 @@ python3 main.py --config /path/to/config
 ├── amazon_reviews.txt
 ├── requirements.txt
 └── scripts
+    ├── bert.py
     ├── config.json
+    ├── lstm.py
     ├── main.py
     ├── model.py
-    └── preprocess.py
+    ├── preprocess.py
+    └── sklearn_models.py
 ```
 
 
 ## Results
 | k-fold accuracy score (macro, k=5)                                     |         |       |       |   
 |------------------------------------------------------------------------|---------|-------|-------|
-| features                                                               | ngrams  | lr    | svm   |   
+| features                                                               | ngrams  | lr    | svm   | 
 | review_title                                                           | 1       | 0.620 | 0.596 |  
 |                                                                        | 2       | 0.635 | 0.626 |   
 |                                                                        | 3       | 0.636 | 0.624 |   
@@ -88,7 +91,7 @@ python3 main.py --config /path/to/config
 |                                                                        | 3       | 0.811 | 0.807 |   
 | review_text, verified_purchase                                         | 1       | 0.794 | 0.754 |   
 |                                                                        | 2       | 0.812 | 0.801 | 
-|                                                                        | 3       | 0.812 | 0.807 |
+|                                                                        | 3       | 0.812 | 0.807 | 
 
 
 ## Dataset
